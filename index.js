@@ -60,7 +60,6 @@ app.post("/api/users", (req, res) =>
 
 app.post("/api/users/:_id/exercises", (req, res) => 
 {
-  console.log("TEST2");
   let idUser = req.params._id;
   let desc = req.body.description;
   let dur = req.body.duration;
@@ -79,15 +78,14 @@ app.post("/api/users/:_id/exercises", (req, res) =>
       }, (err,exerc) => 
       {
         if(err) return res.json(err);
-
+        //{"_id":"662bab250b80b70013c9be9c","username":"t2","date":"Fri Nov 11 2011","duration":90,"description":"tttt"}
         res.json(
           {
-            
+              _id: user._id,
               username: user.username,
-              description: exerc.description,
-              duration: exerc.duration,
               date: exerc.date.toDateString(),
-              _id: exerc._id
+              duration: exerc.duration,
+              description: exerc.description,
           })
 
       }
@@ -101,6 +99,7 @@ app.post("/api/users/:_id/exercises", (req, res) =>
 
   app.get("/api/users/:_id/logs", (req, res) => 
   {
+    
     let idUser = req.params._id;
     //from=2024-01-01&to=2025-01-01&limit=500
     let dateFrom = req.query.from;
@@ -113,13 +112,31 @@ app.post("/api/users/:_id/exercises", (req, res) =>
 
       const id = ObjectId(idUser);
 
+      let result = {};
+      result._id = idUser;
+      result.user = user.username;
+      //"from":"Mon Jan 01 2024","to":"Wed Jan 01 2025","count":1
       let filter = {user:id}
       if(dateFrom && !dateTo)
-        filter.date = { $gte: new Date(dateFrom)};
+      {
+        var fromDate = new Date(dateFrom);
+        filter.date = { $gte: fromDate};
+        result.from = fromDate.toDateString();
+      }
       else if(!dateFrom && dateTo)
-        filter.date = { $lte: new Date(dateTo)};
+      {
+        var toDate = new Date(dateTo);
+        filter.date = { $lte: toDate};
+        result.to = toDate.toDateString();
+      }
       else if(dateFrom && dateTo)
-        filter.date = { $gte: new Date(dateFrom), $lte: new Date(dateTo)};
+      {
+        var fromDate = new Date(dateFrom);
+        var toDate = new Date(dateTo);
+        filter.date = { $gte: fromDate, $lte: toDate};
+        result.from = fromDate.toDateString();
+        result.to = toDate.toDateString();
+      }
 
       let options = {};
       if(limitRec)
@@ -134,12 +151,15 @@ app.post("/api/users/:_id/exercises", (req, res) =>
       Exercise.find(filter, null, options, (err,data) => 
       {
         if(err) return res.json(err);
-        res.json({
-          username: user.username,
-          count: data.length,
-          _id: idUser,
-          logs: data.map(d => ({ description: d.description, duration: d.duration, date:d.date.toDateString() }))
-        });
+        result.count = data.length;
+        result.log = data.map(d => ({ description: d.description, duration: d.duration, date:d.date.toDateString() }));
+        console.log(result);
+        res.json(result);
+
+          // username: user.username,
+          // count: data.length,
+          // _id: idUser,
+          // logs: data.map(d => ({ description: d.description, duration: d.duration, date:d.date.toDateString() }))
       })
       // .select({ description: true,duration:true, date:true })
       // .exec();
