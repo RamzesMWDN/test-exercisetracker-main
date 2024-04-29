@@ -106,6 +106,8 @@ app.post("/api/users/:_id/exercises", (req, res) =>
     let dateTo = req.query.to;
     let limitRec = req.query.limit;
   
+    console.log("GET " + idUser);
+    console.log(req.query);
     User.findById(idUser,(err,user)=> 
     {
       if(err) return res.json(err);
@@ -114,7 +116,7 @@ app.post("/api/users/:_id/exercises", (req, res) =>
 
       let result = {};
       result._id = idUser;
-      result.user = user.username;
+      result.username = user.username;
       //"from":"Mon Jan 01 2024","to":"Wed Jan 01 2025","count":1
       let filter = {user:id}
       if(dateFrom && !dateTo)
@@ -145,13 +147,12 @@ app.post("/api/users/:_id/exercises", (req, res) =>
         options = {limit:num};
       }
 
-      // Exercise.find({user:id, date: {
-      //   $gte: new Date(dateFrom), 
-      //   $lte: new Date(dateTo)
       Exercise.find(filter, null, options, (err,data) => 
       {
         if(err) return res.json(err);
+
         result.count = data.length;
+        //result.log = data; 
         result.log = data.map(d => ({ description: d.description, duration: d.duration, date:d.date.toDateString() }));
         console.log(result);
         res.json(result);
