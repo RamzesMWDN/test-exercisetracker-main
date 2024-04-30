@@ -6,37 +6,34 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const ObjectId = require('mongoose').Types.ObjectId;
 
+app.use(cors());
+app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 //process.env.MONGO_URI
 //console.log(process.env.MONGO_URI);
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
-
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true }
-});
-
+const userSchema = new mongoose.Schema({ username: { type: String, required: true } });
 const User = mongoose.model('User', userSchema);
-
-const exerciseSchema = new mongoose.Schema({
-  description: { type: String, required: true },
-  duration: { type: Number, required: true },
-  date: Date,
-  user: {type: mongoose.Types.ObjectId, ref: "User"}
-});
-
+const exerciseSchema = new mongoose.Schema(
+  {
+    description: { type: String, required: true },
+    duration: { type: Number, required: true },
+    date: Date,
+    user: {type: mongoose.Types.ObjectId, ref: "User"}
+  });
 const Exercise = mongoose.model("Exercise", exerciseSchema);
-
-app.use(cors())
-app.use(express.static('public'))
-app.get('/', (req, res) => {
+let countCall = 0;
+app.get('/', (req, res) => 
+{
   res.sendFile(__dirname + '/views/index.html')
 });
 
 app.get("/api/users", (req, res) => 
 { 
-  console.log("TEST GET");
+  countCall++;
+  console.log("GET USERS " + countCall);
   User.find((err,data)=>
   {
     if (err) return console.error(err);
@@ -46,7 +43,8 @@ app.get("/api/users", (req, res) =>
 
 app.post("/api/users", (req, res) => 
 {
-  console.log("TEST1");
+  countCall++;
+  console.log("ADD USERS " + countCall);
   let name = req.body.username;
   let userData = new User({username:name});
   userData.save((err,data)=>
@@ -60,25 +58,34 @@ app.post("/api/users", (req, res) =>
 
 app.post("/api/users/:_id/exercises", (req, res) => 
 {
+  countCall++;
+  console.log("ADD Exercises " + countCall);
   let idUser = req.params._id;
   let desc = req.body.description;
   let dur = req.body.duration;
+  let strDate = req.body.date;
 
-  console.log(idUser + " " + desc + " " + dur);
+  if(!strDate)
+     strDate = new Date().toString();
+
+  console.log(idUser + " " + desc + " " + dur + " " + strDate);
   User.findById(idUser,(err,user)=> 
   {
     if(err) return res.json(err);
 
-    Exercise.create(
+    let exerciseData = new Exercise(
       {
         description: desc,
         duration: dur,
-        date: new Date(req.body.date),
+        date: new Date(strDate),
         user: user
-      }, (err,exerc) => 
+      }
+    );    
+    exerciseData.save((err,exerc) => 
       {
         if(err) return res.json(err);
         //{"_id":"662bab250b80b70013c9be9c","username":"t2","date":"Fri Nov 11 2011","duration":90,"description":"tttt"}
+        console.log(exerc);
         res.json(
           {
               _id: user._id,
@@ -91,23 +98,25 @@ app.post("/api/users/:_id/exercises", (req, res) =>
       }
     );
 
-      }
-    )
+    });
     //res.json(user);
     
   });
 
   app.get("/api/users/:_id/logs", (req, res) => 
   {
-    
+    try
+    {
     let idUser = req.params._id;
     //from=2024-01-01&to=2025-01-01&limit=500
     let dateFrom = req.query.from;
     let dateTo = req.query.to;
     let limitRec = req.query.limit;
   
-    console.log("GET " + idUser);
-    console.log(req.query);
+    countCall++;
+    console.log("GET log " + countCall);
+    //console.log("GET " + idUser);
+    console.log("Query " + req.query);
     User.findById(idUser,(err,user)=> 
     {
       if(err) return res.json(err);
@@ -166,6 +175,11 @@ app.post("/api/users/:_id/exercises", (req, res) =>
       // .exec();
   
     });
+  }
+  catch
+  {
+    console.error("Error on log call" );
+  }
       
     });
 
